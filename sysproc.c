@@ -81,7 +81,7 @@ sys_sleep(void)
 // since start.
 int
 sys_uptime(void)
-{
+{ 
   uint xticks;
 
   acquire(&tickslock);
@@ -100,8 +100,21 @@ sys_getyear(void)
 }
 
 // proc_dump system call definition
-int
+void
 sys_proc_dump()
 {
-  return 23;
+  // extract arguments and send them to proc_dump
+  proc_info *ptr_proc_infos;
+  argptr(0, (char **)&ptr_proc_infos, sizeof(ptr_proc_infos));
+
+  int n;
+  argint(1, &n);
+
+  if(n <= 0)
+  {
+    return cprintf("proc_dump system call only accepts positive arg!\n");
+  }
+
+  // call corresponding function
+  return kproc_dump(ptr_proc_infos, n);
 }

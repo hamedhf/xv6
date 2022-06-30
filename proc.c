@@ -532,3 +532,45 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+void
+kproc_dump(proc_info proc_infos[], int n)
+{
+  struct proc *p;
+  int i = 0;
+
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state == RUNNING || p->state == RUNNABLE){
+      proc_infos[i].pid = p->pid;
+      proc_infos[i].memsize = p->sz;
+      i++;
+    }
+  }
+  release(&ptable.lock);
+
+  //start sorting in place
+  int j = 0;
+  i = 0;
+
+  // i in [n, n-1, ... , 1]
+  for (int i = n; i >= 1; i--)
+  {
+    for (int j = 0; j <= i - 2; i++)
+    {
+      if(proc_infos[j].memsize > proc_infos[j + 1].memsize)
+      {
+        int tmp;
+
+        tmp = proc_infos[j].pid;
+        proc_infos[j].pid = proc_infos[j + 1].pid;
+        proc_infos[j + 1].pid = tmp;
+
+        tmp = proc_infos[j].memsize;
+        proc_infos[j].memsize = proc_infos[j + 1].memsize;
+        proc_infos[j + 1].memsize = tmp;
+      }
+    }
+  }
+  
+}
