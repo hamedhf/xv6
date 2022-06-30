@@ -98,3 +98,10 @@ sys_getyear(void)
 {
   return 1975;
 }
+
+// proc_dump system call definition
+int
+sys_proc_dump()
+{
+  return 23;
+}
