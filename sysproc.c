@@ -114,6 +114,10 @@ sys_proc_dump()
   {
     return cprintf("proc_dump system call only accepts positive arg!\n");
   }
+  else if (n > NPROC)
+  {
+    return cprintf("in proc_dump system call, n must be less than or equal to %d\n", NPROC);
+  }
 
   // call corresponding function
   return kproc_dump(ptr_proc_infos, n);

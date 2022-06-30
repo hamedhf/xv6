@@ -545,8 +545,13 @@ kproc_dump(proc_info proc_infos[], int n)
       proc_infos[i].pid = p->pid;
       proc_infos[i].memsize = p->sz;
       i++;
+      if(n < i)
+      {
+        cprintf("Not enough space in the given array!\n");
+      }
     }
   }
+  n = (n > i) ? i : n;
   release(&ptable.lock);
 
   //start sorting in place
@@ -554,9 +559,9 @@ kproc_dump(proc_info proc_infos[], int n)
   i = 0;
 
   // i in [n, n-1, ... , 1]
-  for (int i = n; i >= 1; i--)
+  for (i = n; i >= 1; i--)
   {
-    for (int j = 0; j <= i - 2; i++)
+    for (j = 0; j <= i - 2; j++)
     {
       if(proc_infos[j].memsize > proc_infos[j + 1].memsize)
       {
