@@ -183,6 +183,9 @@ UPROGS=\
 	_zombie\
 	_first\
 	_test-proc_dump\
+	_ps\
+	_nice\
+	_dpro\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
@@ -254,6 +257,9 @@ EXTRA=\
 	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c zombie.c\
 	first.c\
 	test-proc_dump.c\
+	ps.c\
+	dpro.c\
+	nice.c\
 	printf.c umalloc.c\
 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl gdbutil\

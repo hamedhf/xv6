@@ -26,6 +26,8 @@ int sleep(int);
 int uptime(void);
 int getyear(void);
 void proc_dump(proc_info proc_infos[], int n);
+int cps(void);
+int chpr(int pid, int priority);
 
 // ulib.c
 int stat(const char*, struct stat*);

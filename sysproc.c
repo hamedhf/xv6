@@ -122,3 +122,21 @@ sys_proc_dump()
   // call corresponding function
   return kproc_dump(ptr_proc_infos, n);
 }
+
+void
+sys_cps(void)
+{
+  return kcps();
+}
+
+int
+sys_chpr(void)
+{
+  int pid, priority;
+  if(argint(0, &pid) < 0)
+    return -1;
+  if(argint(1, &priority) < 0)
+    return -1;
+
+  return kchpr(pid, priority);
+}

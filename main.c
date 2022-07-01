@@ -5,11 +5,21 @@
 #include "mmu.h"
 #include "proc.h"
 #include "x86.h"
+#include "scheduler.h"
 
 static void startothers(void);
-static void mpmain(void)  __attribute__((noreturn));
+// static void mpmain(void)  __attribute__((noreturn));
+static void mpmain(void);
 extern pde_t *kpgdir;
 extern char end[]; // first address after kernel loaded from ELF file
+
+// array of schedulers
+static void (*schedulers[])(void) = {
+[MAIN_SCHEDULER]      main_scheduler,
+[TEST_SCHEDULER]      test_scheduler,
+[PRIORITY_SCHEDULER]  priority_scheduler,
+[MLFQ_SCHEDULER]      mlfq_scheduler,
+};
 
 // Bootstrap processor starts running C code here.
 // Allocate a real stack and switch to it, first
@@ -54,7 +64,7 @@ mpmain(void)
   cprintf("cpu%d: starting %d\n", cpuid(), cpuid());
   idtinit();       // load idt register
   xchg(&(mycpu()->started), 1); // tell startothers() we're up
-  scheduler();     // start running processes
+  schedulers[SCHEDULER]();  // start running processes
 }
 
 pde_t entrypgdir[];  // For entry.S

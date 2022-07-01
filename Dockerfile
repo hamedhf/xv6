@@ -5,4 +5,4 @@ RUN apt install -y build-essential git qemu-system-x86
 
 WORKDIR /src
 
-CMD make clean && make qemu
+CMD make clean && /bin/bash
