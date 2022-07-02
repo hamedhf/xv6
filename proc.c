@@ -90,6 +90,13 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
 
+  p->stime = ticks;       // set start time
+  p->etime = 0;           // set end time to 0, means it’s not valid
+  p->lastStart = 0;       // set lastStart to 0, means it’s not valid
+  p->rtime = 0;           // set run time to 0
+  p->sleepStartTime = 0;  // set sleepStartTime to 0, means it’s not valid
+  p->iotime = 0;          // set i/o time to 0
+
   switch (SCHEDULER)
   {
     case MAIN_SCHEDULER:
@@ -284,6 +291,9 @@ exit(void)
     }
   }
 
+  curproc->etime = ticks;   // set exit time when process terminates
+  curproc->rtime += ticks - curproc->lastStart;
+
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
   sched();
@@ -366,7 +376,7 @@ main_scheduler(void)
       switchuvm(p);
       p->state = RUNNING;
 
-      swtch(&(c->scheduler), p->context);
+      swtch(&(c->scheduler), p->context);   // resumes the for loop
       switchkvm();
 
       // Process is done running for now.
@@ -430,6 +440,7 @@ test_scheduler(void)
 void
 priority_scheduler(void)
 {
+  // update lastStart for a process
   cprintf("Not implemented yet!\n");
   for(;;);
 }
@@ -463,7 +474,7 @@ sched(void)
   if(readeflags()&FL_IF)
     panic("sched interruptible");
   intena = mycpu()->intena;
-  swtch(&p->context, mycpu()->scheduler);
+  swtch(&p->context, mycpu()->scheduler);   // resumes the for loop in scheduler
   mycpu()->intena = intena;
 }
 
@@ -472,7 +483,9 @@ void
 yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
-  myproc()->state = RUNNABLE;
+  struct proc *mproc = myproc();
+  mproc->state = RUNNABLE;
+  mproc->rtime += ticks - mproc->lastStart;
   sched();
   release(&ptable.lock);
 }
@@ -524,6 +537,7 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
+  p->sleepStartTime = ticks;  // set the last sleep time start
 
   sched();
 
@@ -547,7 +561,10 @@ wakeup1(void *chan)
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan)
+    {
       p->state = RUNNABLE;
+      p->iotime += ticks - p->sleepStartTime;
+    }
 }
 
 // Wake up all processes sleeping on chan.
@@ -700,4 +717,63 @@ kchpr(int pid, int priority)
 	}
 	release(&ptable.lock);
 	return pid;
+}
+
+int
+kwaitx(int *wtime, int *rtime)
+{
+  struct proc *p;
+  int havekids, pid;
+  struct proc *curproc = myproc();
+  
+  acquire(&ptable.lock);
+  for(;;){
+    // Scan through table looking for exited children.
+    havekids = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->parent != curproc)
+        continue;
+      havekids = 1;
+      if(p->state == ZOMBIE){
+        // Found one.
+        pid = p->pid;
+        kfree(p->kstack);
+        p->kstack = 0;
+        freevm(p->pgdir);
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+        p->state = UNUSED;
+
+        *wtime = (p->etime - p->stime) - p->rtime;  // set the waiting time of the child
+        *rtime = p->rtime;    // set the run time of child
+
+        release(&ptable.lock);
+        return pid;
+      }
+    }
+
+    // No point waiting if we don't have any children.
+    if(!havekids || curproc->killed){
+      release(&ptable.lock);
+      return -1;
+    }
+
+    // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+    sleep(curproc, &ptable.lock);  //DOC: wait-sleep
+  }
+}
+
+int
+kset_priority(int priority)
+{
+  struct proc *curproc = myproc();
+
+  acquire(&ptable.lock);
+  int oldPriority = curproc->priority;
+  curproc->priority = priority;
+  release(&ptable.lock);
+
+  return oldPriority;
 }

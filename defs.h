@@ -126,6 +126,8 @@ void            yield(void);
 void            kproc_dump(proc_info proc_infos[], int n);
 void            kcps(void);
 int             kchpr(int pid, int priority);
+int             kwaitx(int*, int*);
+int             kset_priority(int);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

@@ -52,8 +52,10 @@ struct proc {
   int priority;
   int stime;                   // Start time
   int etime;                   // End time
-  int iotime;                  // Run time
-  int rtime;                   // I/O time
+  int lastStart;               // Last tick in which process state set to running 
+  int rtime;                   // Run time
+  int sleepStartTime;          // Last tick in which process state set to sleep 
+  int iotime;                  // I/O time
 };
 
 // Process memory is laid out contiguously, low addresses first:

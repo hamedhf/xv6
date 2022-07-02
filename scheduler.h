@@ -1,4 +1,4 @@
-#define SCHEDULER 2
+#define SCHEDULER 3
 
 // scheduler numbers
 #define MAIN_SCHEDULER      1
