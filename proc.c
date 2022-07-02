@@ -11,6 +11,7 @@
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
+  int priorityChanged[NCPU];      // 0 means false, 1 means ture. we should inform every cpu that priorities have changed.
 } ptable;
 
 static struct proc *initproc;
@@ -25,6 +26,11 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
+  // ncpu has a correct value when we enter the scheduler(for each cpu)
+  for(int i = 0; i < NCPU; i++)
+  {
+    ptable.priorityChanged[i] = 0;
+  }
 }
 
 // Must be called with interrupts disabled
@@ -388,6 +394,8 @@ main_scheduler(void)
   }
 }
 
+// don’t use this scheduler.
+// it’s not compatibale with proc changes that we have made
 void
 test_scheduler(void)
 {
@@ -440,9 +448,85 @@ test_scheduler(void)
 void
 priority_scheduler(void)
 {
-  // update lastStart for a process
-  cprintf("Not implemented yet!\n");
-  for(;;);
+  struct proc *p;  
+  struct cpu *c = mycpu();
+  c->proc = 0;
+
+  int highestPriority;
+
+  for(;;)
+  {
+    // Enable interrupts on this processor.
+    sti();
+
+    highestPriority = 101;
+
+    // Loop over process table looking for process to run.
+    acquire(&ptable.lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    {
+      // here we find the highest priority(which means the lowest value)
+      if(p->state != RUNNABLE)
+        continue;
+      
+      if (p->priority < highestPriority)      
+        highestPriority = p->priority;    
+    }
+
+    if(highestPriority == 101)
+    {
+      release(&ptable.lock);
+      continue;
+    }
+
+    // round robin for the processes that have same priority
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    {
+      if(p->state != RUNNABLE || p->priority != highestPriority)
+        continue;
+
+      // Switch to chosen process.  It is the process's job
+      // to release ptable.lock and then reacquire it
+      // before jumping back to us.
+      c->proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      p->lastStart = ticks;
+
+      // resumes the inner for loop(the second one)
+      // which means we have round robin for the processes that have same priority
+      swtch(&(c->scheduler), p->context);
+      switchkvm();
+
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      c->proc = 0;
+
+      int reschedule = 0;
+      for(int i = 0; i < ncpu; i++)
+      {
+        if(ptable.priorityChanged[i] == 1)
+        {
+          reschedule = 1;
+          ptable.priorityChanged[i] = 0;
+          break;
+        }
+      }
+      
+      if(reschedule == 1)
+      {
+        // we should find the highest priority again
+        break;
+      }
+      else
+      {
+        // if not changed we do round robin for the same priorities
+        continue;
+      }
+    }
+    release(&ptable.lock);
+
+  }
 }
 
 void
@@ -773,7 +857,14 @@ kset_priority(int priority)
   acquire(&ptable.lock);
   int oldPriority = curproc->priority;
   curproc->priority = priority;
+  for(int i = 0; i < ncpu; i++)
+  {
+    // we should inform every cpu to reschedule.
+    ptable.priorityChanged[i] = 1;
+  }
   release(&ptable.lock);
+
+  yield();
 
   return oldPriority;
 }

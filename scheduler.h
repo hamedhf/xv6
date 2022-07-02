@@ -1,3 +1,6 @@
+// don’t use TEST_SCHEDULER.
+// it’s not compatible with proc changes that we have made
+
 #define SCHEDULER 3
 
 // scheduler numbers
