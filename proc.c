@@ -12,6 +12,7 @@ struct {
   struct spinlock lock;
   struct proc proc[NPROC];
   int priorityChanged[NCPU];      // 0 means false, 1 means ture. we should inform every cpu that priorities have changed.
+  int queue[3];
 } ptable;
 
 static struct proc *initproc;
@@ -27,10 +28,16 @@ pinit(void)
 {
   initlock(&ptable.lock, "ptable");
   // ncpu has a correct value when we enter the scheduler(for each cpu)
+  acquire(&ptable.lock);
   for(int i = 0; i < NCPU; i++)
   {
     ptable.priorityChanged[i] = 0;
   }
+  for (int i = 0; i < 3; i++)
+  {
+    ptable.queue[i] = 0;
+  }
+  release(&ptable.lock);
 }
 
 // Must be called with interrupts disabled
@@ -116,7 +123,10 @@ found:
       break;
 
     case MLQ_SCHEDULER:
-      p->priority = 10;
+      // in this scheduler, priority shows the number of the queue.
+      // 1(highest priority) -> 2(medium priority) -> 3(lowest priority)
+      p->priority = 1;
+      ptable.queue[0]++;
       break;
 
     default:
@@ -528,8 +538,141 @@ priority_scheduler(void)
 void
 mlq_scheduler(void)
 {
-  cprintf("Not implemented yet!\n");
-  for(;;);
+  struct proc *p;
+  struct cpu *c = mycpu();
+  c->proc = 0;
+  
+  for(;;){
+    // Enable interrupts on this processor.
+    sti();
+
+    acquire(&ptable.lock);
+
+    if(ptable.queue[0] > 0)
+    {
+      // service the first queue
+      // guaranteed scheduling policy
+
+      struct proc *p1 = 0;
+      float minRatio, ratio;
+      int entitled;
+
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+      {
+        if(p->state != RUNNABLE || p->priority != 1)
+          continue;
+
+        // we found a process which is runnable and belongs to the first queue(priority = 1)
+        if(p1 == 0)
+        {
+          // first one
+          p1 = p;
+          entitled = (float)(ticks - p1->stime) / ptable.queue[0]; // according to the tanenbaum book
+          minRatio = (float)(p1->rtime) / entitled;
+        }
+        else
+        {
+          entitled = (float)(ticks - p->stime) / ptable.queue[0]; // according to the tanenbaum book
+          ratio = (float)(p->rtime) / entitled;
+          if(minRatio > ratio)
+          {
+            p1 = p;
+            minRatio = ratio;
+          }
+        }
+      }
+
+      // we found the minRatio to service
+      c->proc = p1;
+      switchuvm(p1);
+      p1->state = RUNNING;
+
+      swtch(&(c->scheduler), p1->context);   // resumes the for loop - we come here from the exit or the yield by means of the sched function.
+      switchkvm();
+
+      ptable.queue[0]--;
+      if(p1->state != ZOMBIE)
+      {
+        // go to the second queue
+        p1->priority = 2;
+        ptable.queue[1]++;
+      }
+
+      c->proc = 0;
+    }
+    else if(ptable.queue[1] > 0)
+    {
+      // service the second queue
+      // FIFO and RR
+
+      struct proc *p1 = 0;
+      uint minStartTime;
+
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+      {
+        if(p->state != RUNNABLE || p->priority != 2)
+          continue;
+
+        if(p1 == 0)
+        {
+          // first one
+          p1 = p;
+          minStartTime = p1->stime;
+        }
+        else if(minStartTime > p->stime)
+        {
+          p1 = p;
+          minStartTime = p->stime;
+        }
+      }
+
+      c->proc = p1;
+      switchuvm(p1);
+      p1->state = RUNNING;
+
+      swtch(&(c->scheduler), p1->context);   // resumes the for loop
+      switchkvm();
+
+      ptable.queue[1]--;
+      if(p1->state != ZOMBIE)
+      {
+        // go to the third queue
+        p1->priority = 3;
+        ptable.queue[2]++;
+      }
+
+      c->proc = 0;
+    }
+    else if(ptable.queue[2] > 0)
+    {
+      // service the third queue
+      // Round Robin
+
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+      {
+        if(p->state != RUNNABLE || p->priority != 3)
+          continue;
+
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+
+        swtch(&(c->scheduler), p->context);   // resumes the for loop
+        switchkvm();
+
+        if(p->state == ZOMBIE)
+        {
+          ptable.queue[2]--;
+        }
+
+        c->proc = 0;
+        break;  // we should check from the first queue
+      }
+    }
+    
+    release(&ptable.lock);
+
+  }
 }
 
 // Enter scheduler.  Must hold only ptable.lock
