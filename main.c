@@ -18,7 +18,7 @@ static void (*schedulers[])(void) = {
 [MAIN_SCHEDULER]      main_scheduler,
 [TEST_SCHEDULER]      test_scheduler,
 [PRIORITY_SCHEDULER]  priority_scheduler,
-[MLFQ_SCHEDULER]      mlfq_scheduler,
+[MLQ_SCHEDULER]       mlq_scheduler,
 };
 
 // Bootstrap processor starts running C code here.

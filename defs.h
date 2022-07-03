@@ -115,7 +115,7 @@ void            procdump(void);
 void            main_scheduler(void) __attribute__((noreturn));
 void            test_scheduler(void) __attribute__((noreturn));
 void            priority_scheduler(void) __attribute__((noreturn));
-void            mlfq_scheduler(void) __attribute__((noreturn));
+void            mlq_scheduler(void) __attribute__((noreturn));
 void            sched(void);
 void            setproc(struct proc*);
 void            sleep(void*, struct spinlock*);
@@ -128,6 +128,7 @@ void            kcps(void);
 int             kchpr(int pid, int priority);
 int             kwaitx(int*, int*);
 int             kset_priority(int);
+void            updateStatistics();
 
 // swtch.S
 void            swtch(struct context**, struct context*);

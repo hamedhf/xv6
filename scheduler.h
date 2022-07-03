@@ -7,4 +7,4 @@
 #define MAIN_SCHEDULER      1
 #define TEST_SCHEDULER      2
 #define PRIORITY_SCHEDULER  3
-#define MLFQ_SCHEDULER      4
+#define MLQ_SCHEDULER       4

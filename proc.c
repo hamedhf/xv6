@@ -98,9 +98,7 @@ found:
 
   p->stime = ticks;       // set start time
   p->etime = 0;           // set end time to 0, means it’s not valid
-  p->lastStart = 0;       // set lastStart to 0, means it’s not valid
   p->rtime = 0;           // set run time to 0
-  p->sleepStartTime = 0;  // set sleepStartTime to 0, means it’s not valid
   p->iotime = 0;          // set i/o time to 0
 
   switch (SCHEDULER)
@@ -117,7 +115,7 @@ found:
       p->priority = 60;
       break;
 
-    case MLFQ_SCHEDULER:
+    case MLQ_SCHEDULER:
       p->priority = 10;
       break;
 
@@ -298,7 +296,6 @@ exit(void)
   }
 
   curproc->etime = ticks;   // set exit time when process terminates
-  curproc->rtime += ticks - curproc->lastStart;
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
@@ -491,7 +488,6 @@ priority_scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-      p->lastStart = ticks;
 
       // resumes the inner for loop(the second one)
       // which means we have round robin for the processes that have same priority
@@ -530,7 +526,7 @@ priority_scheduler(void)
 }
 
 void
-mlfq_scheduler(void)
+mlq_scheduler(void)
 {
   cprintf("Not implemented yet!\n");
   for(;;);
@@ -567,9 +563,7 @@ void
 yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
-  struct proc *mproc = myproc();
-  mproc->state = RUNNABLE;
-  mproc->rtime += ticks - mproc->lastStart;
+  myproc()->state = RUNNABLE;
   sched();
   release(&ptable.lock);
 }
@@ -621,7 +615,6 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
-  p->sleepStartTime = ticks;  // set the last sleep time start
 
   sched();
 
@@ -645,10 +638,7 @@ wakeup1(void *chan)
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan)
-    {
       p->state = RUNNABLE;
-      p->iotime += ticks - p->sleepStartTime;
-    }
 }
 
 // Wake up all processes sleeping on chan.
@@ -867,4 +857,32 @@ kset_priority(int priority)
   yield();
 
   return oldPriority;
+}
+
+// This method will run every clock tick and update the statistic fields for each proc
+void
+updateStatistics() 
+{
+  struct proc *p;
+
+  acquire(&ptable.lock);
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    switch(p->state)
+    {
+      case SLEEPING:
+        p->iotime++;
+        break;
+      case RUNNABLE:
+        break;
+      case RUNNING:
+        p->rtime++;
+        break;
+      default:
+        break;
+    }
+  }
+
+  release(&ptable.lock);
 }
