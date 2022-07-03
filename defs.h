@@ -112,7 +112,10 @@ struct cpu*     mycpu(void);
 struct proc*    myproc();
 void            pinit(void);
 void            procdump(void);
-void            scheduler(void) __attribute__((noreturn));
+void            main_scheduler(void) __attribute__((noreturn));
+void            test_scheduler(void) __attribute__((noreturn));
+void            priority_scheduler(void) __attribute__((noreturn));
+void            mlq_scheduler(void) __attribute__((noreturn));
 void            sched(void);
 void            setproc(struct proc*);
 void            sleep(void*, struct spinlock*);
@@ -121,6 +124,11 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 void            kproc_dump(proc_info proc_infos[], int n);
+void            kcps(void);
+int             kchpr(int pid, int priority);
+int             kwaitx(int*, int*);
+int             kset_priority(int);
+void            updateStatistics();
 
 // swtch.S
 void            swtch(struct context**, struct context*);

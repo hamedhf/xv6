@@ -122,3 +122,53 @@ sys_proc_dump()
   // call corresponding function
   return kproc_dump(ptr_proc_infos, n);
 }
+
+void
+sys_cps(void)
+{
+  return kcps();
+}
+
+int
+sys_chpr(void)
+{
+  int pid, priority;
+  if(argint(0, &pid) < 0)
+    return -1;
+  if(argint(1, &priority) < 0)
+    return -1;
+
+  return kchpr(pid, priority);
+}
+
+int
+sys_waitx(void)
+{
+  int *wtime;
+  int *rtime;
+
+  if(argptr(0, (char**)&wtime, sizeof(*wtime)) < 0)
+    return -1;
+
+  if(argptr(1, (char**)&rtime, sizeof(*rtime)) < 0)
+    return -1 ;
+
+  return kwaitx(wtime, rtime);
+}
+
+int
+sys_set_priority(void)
+{
+  int priority;
+
+  if(argint(0, &priority) < 0)
+    return -1;
+
+  if(priority < 0 || priority > 100)
+  {
+    cprintf("Invalid priority value!\n");
+    return -1;
+  }
+
+  return kset_priority(priority);
+}
