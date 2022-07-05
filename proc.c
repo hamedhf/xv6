@@ -944,7 +944,13 @@ kchpr(int pid, int priority)
 			break;
 		}
 	}
+  for(int i = 0; i < ncpu; i++)
+  {
+    // we should inform every cpu to reschedule.
+    ptable.priorityChanged[i] = 1;
+  }
 	release(&ptable.lock);
+  yield();
 	return pid;
 }
 
