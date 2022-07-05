@@ -904,11 +904,23 @@ void
 kcps()
 {
   struct proc *p;
+
+  // array of schedulers
+  char *schedulers[] = {
+    "main scheduler",
+    "test scheduler",
+    "priority scheduler",
+    "multi-level queue scheduler"
+  };
+
   //Enables interrupts on this processor.
   sti();
 
   //Loop over process table looking for process with pid.
   acquire(&ptable.lock);
+
+  // add what is the scheduler
+  cprintf("Here we are using %s\n", schedulers[SCHEDULER-1]);
   cprintf("name \t pid \t state \t\t priority \n");
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == SLEEPING)
