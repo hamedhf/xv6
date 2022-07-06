@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "scheduler.h"
 
 int
 sys_fork(void)
@@ -137,6 +138,33 @@ sys_chpr(void)
     return -1;
   if(argint(1, &priority) < 0)
     return -1;
+
+  if(SCHEDULER == MAIN_SCHEDULER)
+  {
+    cprintf("Cant change priority with main_scheduler\n");
+    return -1;
+  }
+  else if (SCHEDULER == TEST_SCHEDULER)
+  {
+    if(priority > 20 || priority < 0)
+    {
+      cprintf("priority must be beetween 0 and 20\n");
+      return -1;
+    }
+  }
+  else if (SCHEDULER == PRIORITY_SCHEDULER)
+  {
+    if(priority > 100 || priority < 0)
+    {
+      cprintf("priority must be beetween 0 and 100\n");
+      return -1;
+    }
+  }
+  else if (SCHEDULER == MLQ_SCHEDULER)
+  {
+    cprintf("Cant change priority with mlq_scheduler\n");
+    return -1;
+  }
 
   return kchpr(pid, priority);
 }

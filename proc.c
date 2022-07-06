@@ -934,7 +934,7 @@ kcps()
       cprintf("Probably wrong number has been selected for SCHEDULER\n");
       break;
   }
-  
+
   cprintf("name \t pid \t state \t\t priority \n");
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == SLEEPING)
@@ -951,21 +951,27 @@ int
 kchpr(int pid, int priority)
 {
 	struct proc *p;
+  int oldPriority = -1;
+
 	acquire(&ptable.lock);
 	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
 	  if(p->pid == pid){
+      oldPriority = p->priority;
 			p->priority = priority;
 			break;
 		}
 	}
+
   for(int i = 0; i < ncpu; i++)
   {
     // we should inform every cpu to reschedule.
     ptable.priorityChanged[i] = 1;
   }
 	release(&ptable.lock);
+
   yield();
-	return pid;
+
+	return oldPriority;
 }
 
 int
