@@ -905,14 +905,6 @@ kcps()
 {
   struct proc *p;
 
-  // array of schedulers
-  char *schedulers[] = {
-    "main scheduler",
-    "test scheduler",
-    "priority scheduler",
-    "multi-level queue scheduler"
-  };
-
   //Enables interrupts on this processor.
   sti();
 
@@ -920,7 +912,29 @@ kcps()
   acquire(&ptable.lock);
 
   // add what is the scheduler
-  cprintf("Here we are using %s\n", schedulers[SCHEDULER-1]);
+  switch (SCHEDULER)
+  {
+    case MAIN_SCHEDULER:
+      cprintf("Here we are using MAIN_SCHEDULER\n");
+      break;
+    
+    case TEST_SCHEDULER:
+      cprintf("Here we are using TEST_SCHEDULER\n");
+      break;
+
+    case PRIORITY_SCHEDULER:
+      cprintf("Here we are using PRIORITY_SCHEDULER\n");
+      break;
+    
+    case MLQ_SCHEDULER:
+      cprintf("Here we are using MLQ_SCHEDULER\n");
+      break;
+    
+    default:
+      cprintf("Probably wrong number has been selected for SCHEDULER\n");
+      break;
+  }
+  
   cprintf("name \t pid \t state \t\t priority \n");
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == SLEEPING)
