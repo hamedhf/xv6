@@ -186,6 +186,7 @@ UPROGS=\
 	_ps\
 	_nice\
 	_dpro\
+	_waitx_test\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
@@ -260,6 +261,7 @@ EXTRA=\
 	ps.c\
 	dpro.c\
 	nice.c\
+	waitx_test.c\
 	printf.c umalloc.c\
 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl gdbutil\

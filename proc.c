@@ -904,11 +904,37 @@ void
 kcps()
 {
   struct proc *p;
+
   //Enables interrupts on this processor.
   sti();
 
   //Loop over process table looking for process with pid.
   acquire(&ptable.lock);
+
+  // add what is the scheduler
+  switch (SCHEDULER)
+  {
+    case MAIN_SCHEDULER:
+      cprintf("Here we are using MAIN_SCHEDULER\n");
+      break;
+    
+    case TEST_SCHEDULER:
+      cprintf("Here we are using TEST_SCHEDULER\n");
+      break;
+
+    case PRIORITY_SCHEDULER:
+      cprintf("Here we are using PRIORITY_SCHEDULER\n");
+      break;
+    
+    case MLQ_SCHEDULER:
+      cprintf("Here we are using MLQ_SCHEDULER\n");
+      break;
+    
+    default:
+      cprintf("Probably wrong number has been selected for SCHEDULER\n");
+      break;
+  }
+
   cprintf("name \t pid \t state \t\t priority \n");
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == SLEEPING)
@@ -925,15 +951,27 @@ int
 kchpr(int pid, int priority)
 {
 	struct proc *p;
+  int oldPriority = -1;
+
 	acquire(&ptable.lock);
 	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
 	  if(p->pid == pid){
+      oldPriority = p->priority;
 			p->priority = priority;
 			break;
 		}
 	}
+
+  for(int i = 0; i < ncpu; i++)
+  {
+    // we should inform every cpu to reschedule.
+    ptable.priorityChanged[i] = 1;
+  }
 	release(&ptable.lock);
-	return pid;
+
+  yield();
+
+	return oldPriority;
 }
 
 int
